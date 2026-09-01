@@ -10,12 +10,12 @@ repos:
     hooks:
       - id: flake8
 
-  # Refuses to commit a PDF from anywhere except samples/synthetic/.
+  # Refuses any PDF that is not a generated, marked synthetic sample.
   # The whole point of this repo is that real passbooks never enter it.
   - repo: local
     hooks:
       - id: no-real-pdfs
-        name: block PDFs outside samples/synthetic
+        name: block PDFs that are not synthetic samples
         entry: python scripts/check_no_real_pdfs.py
         language: system
         types: [file]

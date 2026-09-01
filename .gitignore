@@ -1,13 +1,21 @@
 # --- Real passbook data must never be committed -------------------------
-# Every PDF is ignored by default. Only the generated, synthetic samples
-# are allowed through. See docs/masking-fields.md and the README banner.
+# Every PDF is ignored by default. Only the generated, synthetic samples are
+# allowed through, and the pre-commit hook additionally refuses any PDF whose
+# pages are not stamped SYNTHETIC SAMPLE -- so an accidental
+# `-o samples/output` over real passbooks is still caught.
+# See docs/masking-fields.md and the README banner.
 *.pdf
-!samples/synthetic/*.pdf
-!samples/synthetic/**/*.pdf
+!samples/input/*.pdf
+!samples/input/**/*.pdf
+!samples/output/*.pdf
+!samples/output/**/*.pdf
 
-# Redaction output
-out/
-output/
+# Redaction output. Anchored to the repo root: an unanchored `output/` matches
+# samples/output/ too, and git will not un-ignore a file inside an ignored
+# directory, so the negations above would silently do nothing.
+/out/
+/output/
+/redacted/
 
 # Local config (may name real files or employers)
 epfo-redact.yaml

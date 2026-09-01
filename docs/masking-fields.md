@@ -3,9 +3,9 @@
 Every redactable element, what it does, and why the default is what it is.
 `epfo-redact --list-fields` prints the same list from the installed version.
 
-The examples below use the committed sample in `samples/synthetic/`, which you can
-regenerate with `epfo-synth --seed 42`. Like everything else in this repo, the values
-are invented.
+The examples below use the committed sample in `samples/input/`, which you can
+regenerate with `epfo-synth --seed 42`; `samples/output/` holds what the tool makes of
+it. Like everything else in this repo, the values are invented.
 
 ## Identity fields
 

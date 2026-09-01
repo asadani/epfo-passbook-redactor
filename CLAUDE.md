@@ -19,10 +19,14 @@ Not a PDF, not a UAN in a README example, not a real establishment code in a tes
 fixture, not an employer name in a docstring. This has already been violated once — the
 first draft of the README used the author's own UAN, member ID, employer and date of
 birth as illustrative examples. If you write documentation examples, take them from
-`samples/synthetic/` (regenerate with `epfo-synth --seed 42`).
+`samples/input/` (regenerate with `epfo-synth --seed 42`).
 
-Enforced by `.gitignore` (blocks `*.pdf` outside `samples/synthetic/**`),
-`scripts/check_no_real_pdfs.py` as a pre-commit hook, and the same check in CI. Those
+Enforced by `.gitignore` (blocks `*.pdf` outside `samples/input/**` and
+`samples/output/**`), `scripts/check_no_real_pdfs.py` as a pre-commit hook, and the same
+check in CI. The hook is not just a path allowlist: it opens every PDF and requires the
+`SYNTHETIC SAMPLE` stamp `epfo-synth` puts under the banner on *every* page, because
+`-o samples/output` over real passbooks is exactly the typo a path allowlist waves
+through. That stamp is load-bearing — do not remove it from `generate.py`. Those checks
 catch PDFs. They do not catch an identifier pasted into prose — that is on you. Sweep
 before committing docs:
 
@@ -79,6 +83,7 @@ inputs → layout.analyse() → redact.redact_page() → merge.group()/write() �
 | `verify.py` | Three independent leak checks. Runs on every write |
 | `config.py` | YAML config. Precedence: field defaults → profile → config → CLI flags |
 | `synth/generate.py` | Synthetic passbooks. Draws at the real template's geometry |
+| `synth/fonts.py` | Which faces the machine can offer, and how it degrades without them |
 
 `PageReport` is the contract between `redact.py` and `verify.py`. If you add something
 redactable, make sure its literal or its column edge ends up in the report, or the
@@ -100,7 +105,17 @@ These are all things that already cost time once.
   y-bands so the verifier does not report them.
 - **Windows console encoding.** `click.echo()` of a non-ASCII character raises
   `UnicodeEncodeError` on a cp1252 console. Keep CLI output ASCII. (Markdown files are
-  fine — this is about terminal output only.)
+  fine — this is about terminal output only.) The same bites when debugging: `print()`
+  of extracted Devanagari needs `PYTHONIOENCODING=utf-8`.
+- **`set_simple=True` on the synthetic generator's Latin fonts.** Embedded the default
+  way (Identity-H), MuPDF builds the ToUnicode map by reversing the face's cmap, and
+  Calibri maps `U+0020`/`U+00A0` to one space glyph and `U+002D`/`U+2010` to one hyphen.
+  Every space in the extracted text then comes back as `U+00A0` and the redactor, which
+  splits words on real spaces, matches no label at all. Devanagari must stay multi-byte;
+  nothing keys off the Hindi. `tests/test_synth.py` pins the round-trip.
+- **The footer block moves.** The disclaimer and bullets hang off the bottom of the
+  table, not off the page — 90pt of travel between a short year and a full one. The
+  first version had them at fixed y and a twelve-month year printed straight over them.
 - **Balance and contribution columns share a right edge.** One detected band covers
   both, which is why `epf-employee` redacts the employee contribution *and* the employee
   balance. Intentional.
@@ -124,13 +139,20 @@ two directories it was written against.
 
 ```bash
 pip install -e ".[dev]"
-pytest -q                  # ~10s, 81 tests
+pytest -q                  # ~30s, 88 tests
 black . && flake8          # line length 88, extend-ignore E203,W503
-epfo-synth --seed 42       # regenerate samples/synthetic
+epfo-synth --seed 42       # regenerate samples/input
+epfo-redact samples/input -o samples/output   # regenerate samples/output
 ```
 
 House style follows the sibling `git-branch-cleaner` repo: setuptools, click,
 `[project.scripts]`, black 88, flake8, pre-commit, CI matrix on 3.10–3.12.
+
+The generator needs fonts it does not ship. It looks for Calibri (or metric-compatible
+Carlito) and a Devanagari face (Nirmala UI, Noto Sans Devanagari, Mangal, Lohit), and
+degrades to Helvetica and English-only labels when it finds neither. Committed samples
+are generated on Windows, so they have both; CI may not, which is why no test asserts
+anything about the Hindi.
 
 Tests build their own synthetic passbooks in `tmp_path` via the `synth_dir` fixture. No
 test reads a committed file, so a test can never accidentally depend on real data.
@@ -144,8 +166,12 @@ path inside it.
 ## Not done yet
 
 - Not pushed to GitHub. `gh repo create asadani/epfo-passbook-redactor --public --source=. --push`
-- Multi-page passbooks are handled per page, but every real sample seen so far was a
-  single page per financial year. A genuinely multi-page year is untested.
+- A *single financial year* spilling onto two pages is still untested. What is now
+  covered is the other multi-page case, which is the common one: the portal hands over a
+  whole account as one PDF with a financial year per page. `samples/input/` ships one of
+  those per employer alongside the per-year files, `Source.fiscal_years` collects every
+  year in a document so the output filename spans them all, and the year-per-page shape
+  has a test.
 - Scanned or image-only passbooks are out of scope and are now refused outright, as is
   any PDF that produces zero redactions — both would otherwise write a file that looks
   processed and is not. There is no OCR path and probably should not be one: redacting

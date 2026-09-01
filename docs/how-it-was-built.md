@@ -108,9 +108,28 @@ and money simulated from the statutory rules: 12% EPF employee, 8.33% EPS capped
 carried across years, partial joining and leaving years. Pages are drawn at the real
 template's geometry so the redactor sees the structure it would see on a real document.
 
-Deterministic under `--seed`, so `samples/synthetic/` is reproducible and tests are
-stable. Every test fixture builds its own set in `tmp_path`; no test reads a committed
-file, so no test can accidentally come to depend on real data.
+The first version stopped at geometry and drew English labels in Helvetica, which was
+enough for the redactor and not enough for a human — the samples did not read as
+passbooks, which made them useless for showing anyone what the tool does. The second
+version copies the letterhead, the bilingual Hindi/English column headings, the red
+`Total Withdrawals` row and the disclaimer block, all measured off a real page. Two
+things bit on the way:
+
+- **The footer block is not at a fixed height.** It hangs off the bottom of the table,
+  which moves by 90pt between a two-month year and a twelve-month one. Fixed
+  coordinates put the disclaimer through the middle of a full year's rows.
+- **Calibri embedded as a CID font lies about its own text.** MuPDF derives the
+  ToUnicode map by walking the face's cmap backwards, and Calibri maps both `U+0020`
+  and `U+00A0` to one space glyph, both `U+002D` and `U+2010` to one hyphen. Extracted
+  text came back as `Establishment ID/Name` and `Financial Year ‐ 2015`, and
+  the redactor — which splits words on real spaces — could not find a single label.
+  Embedding the Latin faces as simple single-byte fonts (`set_simple=True`) fixes the
+  round-trip. Devanagari still needs the multi-byte encoding, but nothing keys off the
+  Hindi. `tests/test_synth.py` pins this.
+
+Deterministic under `--seed`, so `samples/` is reproducible and tests are stable. Every
+test fixture builds its own set in `tmp_path`; no test reads a committed file, so no
+test can accidentally come to depend on real data.
 
 ### Configurability
 

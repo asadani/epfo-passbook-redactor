@@ -35,6 +35,9 @@ epfo-synth = "epfo_redactor.synth.cli:main"
 [tool.setuptools]
 packages = ["epfo_redactor", "epfo_redactor.synth"]
 
+[tool.setuptools.package-data]
+"epfo_redactor.synth" = ["assets/*.png"]
+
 [tool.black]
 line-length = 88
 target-version = ["py310"]

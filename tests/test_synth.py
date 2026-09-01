@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import random
+import re
 
 import pymupdf
 import pytest
 
 from epfo_redactor.synth.generate import (
     EPS_MAX,
+    MARKER,
     EPS_WAGE_CEILING,
     Employer,
     _contributions,
@@ -151,3 +153,104 @@ def test_one_file_per_employer_year(tmp_path):
     paths = generate(tmp_path, employers=2, years=(2015, 2018), seed=3)
     assert len(paths) == 4
     assert len({p.parent.name for p in paths}) == 2
+
+
+def test_every_page_is_stamped_as_a_synthetic_sample(tmp_path):
+    """The pre-commit hook refuses any PDF without this on every page."""
+    paths = generate(tmp_path, employers=2, years=(2015, 2018), seed=3, combined=True)
+    for path in paths:
+        doc = pymupdf.open(path)
+        try:
+            for page in doc:
+                assert MARKER in page.get_text()
+        finally:
+            doc.close()
+
+
+def test_text_extracts_with_ordinary_spaces_and_hyphens(tmp_path):
+    """Embedded as a CID font, Calibri reports its space glyph as U+00A0 and
+    its hyphen as U+2010, which would leave every label unmatchable."""
+    paths = generate(tmp_path, employers=1, years=(2019, 2019), seed=5)
+    doc = pymupdf.open(paths[0])
+    try:
+        words = {w[4] for w in doc[0].get_text("words")}
+        text = doc[0].get_text()
+    finally:
+        doc.close()
+    assert "Establishment" in words and "ID/Name" in words
+    assert "\u2010" not in text  # a U+2010 hyphen written instead of "-"
+    for latin in (
+        "Establishment ID/Name",
+        "Financial Year - 2019-2020",
+        "Closing Balance as on",
+        "Cont. for Due-Month",
+    ):
+        assert latin in text
+
+
+def test_combined_writes_one_multi_page_pdf_per_employer(tmp_path):
+    paths = generate(tmp_path, employers=2, years=(2015, 2020), seed=3, combined=True)
+    combined = sorted(p for p in paths if p.parent == tmp_path)
+    assert len(combined) == 2
+
+    doc = pymupdf.open(combined[0])
+    try:
+        years = [
+            int(re.search(r"Financial Year - (\d{4})", page.get_text()).group(1))
+            for page in doc
+        ]
+    finally:
+        doc.close()
+    assert len(years) > 1
+    assert years == sorted(years)
+    assert len(set(years)) == len(years)
+
+
+def test_the_banner_is_drawn_on_every_page(tmp_path):
+    paths = generate(tmp_path, employers=1, years=(2019, 2020), seed=5, combined=True)
+    doc = pymupdf.open(paths[-1])
+    try:
+        assert all(page.get_images() for page in doc)
+    finally:
+        doc.close()
+
+
+def test_english_only_pages_when_no_devanagari_font_is_installed(tmp_path, monkeypatch):
+    """CI runners generally have neither Calibri nor a Devanagari face. The
+    page must still carry every label the redactor looks for."""
+    import sys
+
+    import pymupdf as _pymupdf
+
+    from epfo_redactor.synth import fonts
+
+    # `from .generate import generate` in the package __init__ rebinds the name,
+    # so the module itself has to come from sys.modules.
+    generate_mod = sys.modules["epfo_redactor.synth.generate"]
+
+    plain = fonts.FaceSet(
+        latin=fonts.Face("helv", _pymupdf.Font(fontname="helv"), None),
+        bold=fonts.Face("hebo", _pymupdf.Font(fontname="hebo"), None),
+        hindi=None,
+    )
+    monkeypatch.setattr(generate_mod, "load_faces", lambda: plain)
+
+    paths = generate_mod.generate(tmp_path, employers=1, years=(2019, 2019), seed=5)
+    doc = pymupdf.open(paths[0])
+    try:
+        text = doc[0].get_text()
+    finally:
+        doc.close()
+    assert text.isascii()
+    for needle in (
+        MARKER,
+        "Establishment ID/Name",
+        "Member ID/Name",
+        "UAN",
+        "Particulars",
+        "Wage Month",
+        "Closing Balance",
+        "Financial Year",
+        "End Of Statement",
+    ):
+        assert needle in text

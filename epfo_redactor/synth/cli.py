@@ -26,7 +26,7 @@ def _years(ctx, param, value: str) -> tuple[int, int]:
 @click.option(
     "-o",
     "--out",
-    default="samples/synthetic",
+    default="samples/input",
     type=click.Path(file_okay=False, path_type=Path),
     help="Where to write the generated passbooks.",
 )
@@ -39,10 +39,17 @@ def _years(ctx, param, value: str) -> tuple[int, int]:
     metavar="START:END",
     help="Financial years to cover, split across the employers.",
 )
+@click.option(
+    "--combined/--no-combined",
+    default=True,
+    show_default=True,
+    help="Also write one multi-page PDF per employer, a financial year per "
+    "page, which is the shape the EPFO portal hands over.",
+)
 @click.option("--seed", type=int, help="Seed, for reproducible output.")
 @click.option("--locale", default="en_IN", show_default=True, help="Faker locale.")
 @click.option("-q", "--quiet", is_flag=True, help="Only print the summary line.")
-def main(out, employers, years, seed, locale, quiet):
+def main(out, employers, years, combined, seed, locale, quiet):
     """Generate fake EPFO passbook PDFs for testing and demos.
 
     Every name, employer, account number and rupee figure is invented. The
@@ -50,18 +57,29 @@ def main(out, employers, years, seed, locale, quiet):
     capped at the wage ceiling) so the output behaves like a real statement
     without containing anyone's data.
 
+    Two shapes come out. One PDF per financial year under <out>/<PREFIX>/
+    is what you get downloading a year at a time; one multi-page PDF per
+    employer at <out>/ is what the portal gives you for a whole account.
+    Point the redactor at either.
+
     \b
     Examples:
       epfo-synth --seed 42
       epfo-synth --employers 3 --years 2009:2026 -o /tmp/demo
+      epfo-synth --no-combined -o /tmp/per-year
     """
     written = generate(
-        out_dir=out, employers=employers, years=years, seed=seed, locale=locale
+        out_dir=out,
+        employers=employers,
+        years=years,
+        seed=seed,
+        locale=locale,
+        combined=combined,
     )
     if not quiet:
         for path in written:
             click.echo(f"  {path}")
-    folders = sorted({p.parent.name for p in written})
+    folders = sorted({p.parent.name for p in written if p.parent != out})
     click.echo(
         f"wrote {len(written)} synthetic passbook(s) "
         f"across {len(folders)} employer(s): {', '.join(folders)}"
