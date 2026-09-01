@@ -1,0 +1,43 @@
+# --- Real passbook data must never be committed -------------------------
+# Every PDF is ignored by default. Only the generated, synthetic samples
+# are allowed through. See docs/masking-fields.md and the README banner.
+*.pdf
+!samples/synthetic/*.pdf
+!samples/synthetic/**/*.pdf
+
+# Redaction output
+out/
+output/
+
+# Local config (may name real files or employers)
+epfo-redact.yaml
+!examples/epfo-redact.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+dist/
+build/
+*.egg-info/
+.eggs/
+*.egg
+
+# Testing / type / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+
+# Local Claude / editor
+.claude/

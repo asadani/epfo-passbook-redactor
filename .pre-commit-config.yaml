@@ -1,0 +1,22 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+
+  # Refuses to commit a PDF from anywhere except samples/synthetic/.
+  # The whole point of this repo is that real passbooks never enter it.
+  - repo: local
+    hooks:
+      - id: no-real-pdfs
+        name: block PDFs outside samples/synthetic
+        entry: python scripts/check_no_real_pdfs.py
+        language: system
+        types: [file]
+        pass_filenames: true

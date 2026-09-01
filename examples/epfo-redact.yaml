@@ -1,0 +1,41 @@
+# Example config for epfo-redact.
+#
+# Copy to the directory you run the command from, as `epfo-redact.yaml`, and it
+# is picked up automatically. Command-line flags override anything set here.
+# Every key is optional.
+
+# Starting set of fields: default | strict | identity | financial | none
+profile: default
+
+# Add fields on top of the profile.
+mask:
+  - dob
+
+# Remove fields from the profile.
+no-mask:
+  - epf-wages
+
+# Rows left readable inside otherwise-redacted columns.
+# A zero withdrawal is usually favourable evidence, so it is often worth keeping.
+# Kinds: opening, contributions, transfers, withdrawals, interest, closing
+keep-rows: withdrawals, transfers
+
+# Characters left readable at the start of a field.
+keep-chars:
+  uan: 4
+  member-id: 5
+  establishment-id: 5
+
+# Style for everything: black | grey | white | hatch
+style: grey
+
+# Style for one field, or for a whole kind (identity / financial).
+field-style:
+  identity: black
+  member-id: black
+
+# establishment (one PDF per employer) | dir | none
+group-by: establishment
+
+merge: true
+out: redacted

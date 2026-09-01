@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "epfo-passbook-redactor"
+version = "0.1.0"
+description = "Redact and merge EPFO member passbook PDFs, keeping EPS details readable."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["epfo", "pdf", "redaction", "privacy", "pii", "provident-fund"]
+dependencies = [
+    "PyMuPDF>=1.24",
+    "click>=8.0.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+synth = [
+    "Faker>=25.0",
+]
+dev = [
+    "Faker>=25.0",
+    "black>=24.0",
+    "flake8>=7.0",
+    "pytest>=8.0",
+    "pre-commit>=3.0",
+]
+
+[project.scripts]
+epfo-redact = "epfo_redactor.cli:main"
+epfo-synth = "epfo_redactor.synth.cli:main"
+
+[tool.setuptools]
+packages = ["epfo_redactor", "epfo_redactor.synth"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
