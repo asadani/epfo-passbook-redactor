@@ -9,6 +9,7 @@ import click
 
 from . import config as config_mod
 from .fields import BY_NAME, FIELDS, PROFILES, ROW_KINDS, FieldError, resolve
+from .layout import LayoutError
 from .merge import Source, group, write
 from .redact import STYLES, StyleError, redact_document
 from .verify import verify
@@ -231,9 +232,26 @@ def main(
                 )
             except StyleError as exc:
                 raise click.ClickException(str(exc)) from exc
+            except LayoutError as exc:
+                # A scan has no text layer: nothing to detect, nothing to remove.
+                # Failing loudly beats writing a file that looks redacted.
+                raise click.ClickException(
+                    f"{path.name}: {exc}. This tool needs a text-based passbook "
+                    f"(the PDF you download from the member portal); a scanned or "
+                    f"photographed page cannot be redacted."
+                ) from exc
             sources.append(Source(path=path, doc=doc, reports=reports))
+            total = sum(sum(r.counts.values()) for r in reports)
+            if total == 0:
+                # Zero redactions on a real passbook is impossible: the header
+                # identifiers alone always match. Silence here would ship a file
+                # that looks processed and is not.
+                raise click.ClickException(
+                    f"{path.name}: nothing matched. This does not look like an "
+                    f"EPFO member passbook, or the selected fields are absent "
+                    f"from it. Run with --dry-run to inspect."
+                )
             if not quiet:
-                total = sum(sum(r.counts.values()) for r in reports)
                 fallback = any(not r.detected_columns for r in reports)
                 note = "  [fallback geometry]" if fallback else ""
                 click.echo(f"  {path.name}: {total} redaction(s){note}")

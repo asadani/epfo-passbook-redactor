@@ -139,3 +139,34 @@ def test_empty_config_is_valid(tmp_path):
     path = tmp_path / "epfo-redact.yaml"
     path.write_text("", encoding="utf-8")
     assert load(path) == Config()
+
+
+def test_a_page_with_no_text_layer_is_refused(run, tmp_path):
+    """A scan cannot be redacted. Failing loudly beats writing a file that
+    looks redacted and is not."""
+    scan = tmp_path / "scanned.pdf"
+    doc = pymupdf.open()
+    doc.new_page(width=595, height=842)
+    doc.save(scan)
+    doc.close()
+
+    result = run(main, [str(scan), "-o", str(tmp_path / "out")])
+    assert result.exit_code != 0
+    assert "no extractable text" in result.output
+    assert "scanned" in result.output
+
+
+def test_a_pdf_that_is_not_a_passbook_is_refused(run, tmp_path):
+    """Text, but none of it ours: zero redactions must not report success."""
+    other = tmp_path / "invoice.pdf"
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text(
+        (72, 72), "Invoice 2019 total 15,000", fontname="helv", fontsize=11
+    )
+    doc.save(other)
+    doc.close()
+
+    result = run(main, [str(other), "-o", str(tmp_path / "out")])
+    assert result.exit_code != 0
+    assert "nothing matched" in result.output

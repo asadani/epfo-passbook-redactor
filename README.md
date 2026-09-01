@@ -194,6 +194,21 @@ pytest -q
 black --check . && flake8
 ```
 
+## Development
+
+- [`CLAUDE.md`](CLAUDE.md) — architecture, invariants and the gotchas that already cost
+  time once. Read before changing anything.
+- [`docs/how-it-was-built.md`](docs/how-it-was-built.md) — why the design is what it is,
+  how correctness was established, and the bugs found on the way.
+- [`docs/masking-fields.md`](docs/masking-fields.md) — every field, profile and style.
+
+```bash
+pip install -e ".[dev]"
+pytest -q            # 83 tests, ~10s, all on synthetic data
+black . && flake8
+pre-commit install   # includes a hook refusing PDFs outside samples/synthetic/
+```
+
 ## Project layout
 
 ```
@@ -212,11 +227,12 @@ epfo_redactor/
 
 - Built for the EPFO **member passbook** PDF, the one you download from the member
   portal. Other EPFO documents are not handled.
-- Text-based PDFs only. A scanned or photographed passbook has no text layer; there is
-  nothing to detect and nothing to remove.
 - Column detection relies on the English header labels. A future template that renames
   or drops them falls back to fixed geometry, and the run reports `[fallback geometry]`
   — check that output by eye.
+- Scanned or image-only passbooks are refused: no text layer means nothing to detect
+  and nothing to remove. Any PDF producing zero redactions is refused too, rather than
+  reported as successfully processed.
 - The verifier's content-stream check is a substring search. A string broken across
   kerned pieces would evade it; check 1 is what covers that case.
 - **Look at the output before you send it.** The checks are good, but they are checks on
