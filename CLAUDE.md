@@ -11,6 +11,10 @@ It grew out of a one-off script that processed 20 real passbooks for a backgroun
 the repo is the generalised version, built so it can be tested and demonstrated with no
 real data anywhere near it.
 
+Public, at <https://github.com/asadani/epfo-passbook-redactor>. `main` is the only
+branch and it is pushed, so anything committed here is visible immediately — which is
+what makes hard rule 1 below a publishing decision rather than a housekeeping one.
+
 ## Hard rules
 
 **1. No real passbook data enters this repo. Ever.**
@@ -165,7 +169,6 @@ path inside it.
 
 ## Not done yet
 
-- Not pushed to GitHub. `gh repo create asadani/epfo-passbook-redactor --public --source=. --push`
 - A *single financial year* spilling onto two pages is still untested. What is now
   covered is the other multi-page case, which is the common one: the portal hands over a
   whole account as one PDF with a financial year per page. `samples/input/` ships one of
