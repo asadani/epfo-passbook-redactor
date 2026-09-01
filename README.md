@@ -54,6 +54,22 @@ contribution derives from that ceiling, so neither reveals an actual salary — 
 wages and EPF contributions reveal it exactly. Full field list:
 [`docs/masking-fields.md`](docs/masking-fields.md).
 
+## Getting your passbook
+
+Download it from the official EPFO member passbook portal:
+**<https://passbook.epfindia.gov.in/MemberPassBook/login>** — sign in with your UAN and
+password, pick a member ID, then **View Passbook** and download.
+
+You will get one of two shapes, and both work here:
+
+- **A whole account as one PDF**, a financial year per page. Point the tool straight at
+  the file.
+- **One PDF per financial year**, which is what you get pulling a year at a time.
+  Point the tool at the folder.
+
+`samples/input/` has an example of each — see [`samples/README.md`](samples/README.md).
+This tool never touches the portal or the network; it only reads PDFs you already have.
+
 ## Install
 
 ```bash

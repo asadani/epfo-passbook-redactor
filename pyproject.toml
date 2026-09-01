@@ -5,11 +5,47 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "epfo-passbook-redactor"
 version = "0.1.0"
-description = "Redact and merge EPFO member passbook PDFs, keeping EPS details readable."
+description = "Redact and merge EPFO member passbook (EPF/UAN) PDFs, keeping EPS pension details readable."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-keywords = ["epfo", "pdf", "redaction", "privacy", "pii", "provident-fund"]
+authors = [
+    { name = "Anuj Sadani", email = "61734069+asadani@users.noreply.github.com" },
+]
+# What someone would actually type looking for this. Every term has to be true of
+# the tool: no padding with things it does not do.
+keywords = [
+    "epfo",
+    "epf",
+    "uan",
+    "passbook",
+    "provident-fund",
+    "pdf",
+    "pdf-redaction",
+    "redaction",
+    "anonymization",
+    "privacy",
+    "pii",
+    "background-check",
+    "pymupdf",
+    "cli",
+    "india",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Text Processing :: Filters",
+    "Topic :: Utilities",
+]
 dependencies = [
     "PyMuPDF>=1.24",
     "click>=8.0.0",
@@ -27,6 +63,12 @@ dev = [
     "pytest>=8.0",
     "pre-commit>=3.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/asadani/epfo-passbook-redactor"
+Repository = "https://github.com/asadani/epfo-passbook-redactor"
+Issues = "https://github.com/asadani/epfo-passbook-redactor/issues"
+"Fields reference" = "https://github.com/asadani/epfo-passbook-redactor/blob/main/docs/masking-fields.md"
 
 [project.scripts]
 epfo-redact = "epfo_redactor.cli:main"
