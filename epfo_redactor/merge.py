@@ -39,12 +39,24 @@ class Source:
     reports: list[PageReport]
 
     @property
-    def fiscal_year(self) -> int | None:
-        for report in self.reports:
-            if report.fiscal_year is not None:
-                return report.fiscal_year
+    def fiscal_years(self) -> list[int]:
+        """Every financial year in the document, in page order.
+
+        The portal hands over a whole account as one PDF with a financial year
+        per page, so a source is not necessarily a single year. Taking only the
+        first page's year would label a 2015-2021 document ``FY2015``.
+        """
+        years = [r.fiscal_year for r in self.reports if r.fiscal_year is not None]
+        if years:
+            return years
         match = YEAR_IN_NAME.search(self.path.stem)
-        return int(match.group(0)) if match else None
+        return [int(match.group(0))] if match else []
+
+    @property
+    def fiscal_year(self) -> int | None:
+        """The earliest year in the document; what it sorts by."""
+        years = self.fiscal_years
+        return years[0] if years else None
 
     @property
     def establishment_id(self) -> str | None:
@@ -63,7 +75,7 @@ class Output:
 
     @property
     def years(self) -> list[int]:
-        return sorted(s.fiscal_year for s in self.sources if s.fiscal_year is not None)
+        return sorted(y for s in self.sources for y in s.fiscal_years)
 
     def filename(self) -> str:
         years = self.years

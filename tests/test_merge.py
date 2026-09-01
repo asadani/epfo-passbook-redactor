@@ -96,6 +96,7 @@ def test_single_year_group_gets_a_single_year_name():
     class Stub:
         establishment_id = "ABCDE1111111111"
         fiscal_year = 2019
+        fiscal_years = [2019]
         path = type("P", (), {"stem": "x", "name": "x"})()
 
     assert "FY2019_" in Output(label="ABCDE", sources=[Stub()]).filename()
@@ -117,3 +118,16 @@ def test_written_output_has_scrubbed_metadata(synth_pdfs, tmp_path):
         assert "redacted" in doc.metadata["title"]
     finally:
         doc.close()
+
+
+def test_a_multi_year_source_is_named_with_its_whole_span():
+    """A single PDF can hold a financial year per page; naming it after the
+    first would claim the document covers one year."""
+
+    class Stub:
+        establishment_id = "ABCDE1111111111"
+        fiscal_year = 2015
+        fiscal_years = [2015, 2016, 2017]
+        path = type("P", (), {"stem": "x", "name": "x"})()
+
+    assert "FY2015-2017_" in Output(label="ABCDE", sources=[Stub()]).filename()
