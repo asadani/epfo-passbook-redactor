@@ -8,6 +8,15 @@ import re
 import pymupdf
 import pytest
 
+from epfo_redactor.fields import (
+    COL_EMPLOYEE,
+    COL_EMPLOYER,
+    COL_EPF_WAGES,
+    COL_EPS_WAGES,
+    COL_PENSION,
+)
+from epfo_redactor.layout import analyse
+
 from epfo_redactor.synth.generate import (
     EPS_MAX,
     MARKER,
@@ -17,6 +26,7 @@ from epfo_redactor.synth.generate import (
     build_years,
     generate,
     inr,
+    make_member,
 )
 
 
@@ -239,8 +249,20 @@ def test_english_only_pages_when_no_devanagari_font_is_installed(tmp_path, monke
     doc = pymupdf.open(paths[0])
     try:
         text = doc[0].get_text()
+        # The point is not that the labels are printed but that the redactor can
+        # still find all five columns from them. This guards the regression CI
+        # caught: centring "EPS" in its cell put it nearer the Employee label
+        # than its own, and the EPS column silently went undetected.
+        columns = set(analyse(doc[0], selected=set(), keep_rows=set()).columns)
     finally:
         doc.close()
+    assert columns == {
+        COL_EPF_WAGES,
+        COL_EPS_WAGES,
+        COL_EMPLOYEE,
+        COL_EMPLOYER,
+        COL_PENSION,
+    }
     assert text.isascii()
     for needle in (
         MARKER,
@@ -254,3 +276,23 @@ def test_english_only_pages_when_no_devanagari_font_is_installed(tmp_path, monke
         "End Of Statement",
     ):
         assert needle in text
+
+
+def test_a_seed_means_the_same_person_on_any_day():
+    """Pinned to literals on purpose.
+
+    The generator used Faker's date_of_birth, which counts back from today, so
+    `--seed 42` produced a different member every day -- and the committed
+    samples churned in git whenever they were regenerated on a new date. No
+    same-process comparison can catch that, because both halves run on the same
+    day. Only a literal can.
+    """
+    from faker import Faker
+
+    for seed, name, uan, dob in (
+        (42, "ARYAN MAHARAJ", "115631219101", "02-05-1979"),
+        (99, "LAJITA IYENGAR", "153274680169", "25-05-1991"),
+    ):
+        Faker.seed(seed)
+        member = make_member(Faker("en_IN"), random.Random(seed))
+        assert (member.name, member.uan, member.dob) == (name, uan, dob)

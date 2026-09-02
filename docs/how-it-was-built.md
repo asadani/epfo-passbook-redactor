@@ -127,9 +127,16 @@ things bit on the way:
   round-trip. Devanagari still needs the multi-byte encoding, but nothing keys off the
   Hindi. `tests/test_synth.py` pins this.
 
-Deterministic under `--seed`, so `samples/` is reproducible and tests are stable. Every
-test fixture builds its own set in `tmp_path`; no test reads a committed file, so no
-test can accidentally come to depend on real data.
+Deterministic under `--seed`, so `samples/` is reproducible and tests are stable. That
+claim was false for a while and nothing noticed: the member's date of birth came from
+Faker's `date_of_birth`, which counts back from *today*, so a seed meant one person on
+Tuesday and another on Wednesday. It surfaced as the committed samples showing a diff
+whenever they were regenerated on a new date. Ages are now measured back from a fixed
+reference date, and `tests/test_synth.py` pins the result to literals -- the only kind
+of test that can catch it, since two runs in one process always share a today.
+
+Every test fixture builds its own set in `tmp_path`; no test reads a committed file, so
+no test can accidentally come to depend on real data.
 
 ### Configurability
 

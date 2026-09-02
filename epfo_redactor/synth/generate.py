@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pymupdf
@@ -124,6 +124,11 @@ RED = (1.0, 0.0, 0.0)
 BLACK = (0.0, 0.0, 0.0)
 GRID_COLOR = (0.0, 0.0, 0.0)
 GRID_WIDTH = 0.5
+
+# The synthetic member's age is measured back from a fixed date, never from
+# today, so a seed means the same person on any day. See make_member.
+DOB_REFERENCE = date(2026, 1, 1)
+MIN_AGE, MAX_AGE = 25, 55
 
 MONTHS = (
     "Apr",
@@ -476,6 +481,11 @@ TXN_HEADINGS = (
     (8, 9, 285.8, 295.25, "पेंशन  /", "Pension"),
 )
 
+# The five headings that sit over a right-aligned numeric column. layout.py
+# derives each column's position from the label above it, so where these land
+# is load-bearing, not cosmetic.
+COLUMN_HEADINGS = frozenset({"EPF", "EPS", "Employee", "Employer", "Pension"})
+
 BALANCE_HEADS = (
     (X_EMPLOYEE, "कर्मचारी शेष /", "Employee"),
     (X_EMPLOYER, "नियोक्ता शेष /", "Employer"),
@@ -498,13 +508,22 @@ def _txn_heading(
     room = cell_right - cell_left - 2 * CELL_PAD
     face = sheet.faces.bold
     if sheet.faces.hindi is None:
+        label = english.lstrip("/ ").strip()
+        # Right-aligned, not centred, when the heading names a numeric column.
+        # layout.detect_columns matches a cluster of cell right edges to the
+        # nearest header label, and on this page the columns are 57pt apart
+        # while a centred "EPS" sits 17pt from its own column's right edge and
+        # 9pt from where "Employee" starts -- so the EPS column gets claimed by
+        # Employee and never detected. The real template has no such gap: its
+        # English half ends within a point of the column edge, because the Hindi
+        # half pushes it there. Without the Hindi we have to place it directly.
         sheet.draw(
-            centre,
+            cell_right - CELL_PAD if label in COLUMN_HEADINGS else centre,
             english_top,
-            english.lstrip("/ ").strip(),
+            label,
             face,
             BODY_SIZE,
-            align="centre",
+            align="right" if label in COLUMN_HEADINGS else "centre",
             max_width=room,
         )
     elif abs(hindi_top - english_top) < 4.0:
@@ -849,10 +868,19 @@ def _company(fake) -> str:
 
 
 def make_member(fake, rng: random.Random) -> Member:
+    # date_between_dates, not date_of_birth: the latter counts back from today,
+    # so --seed 42 produced a different person tomorrow. Reproducible within a
+    # day and not across one is the worst of both -- the committed samples
+    # churned in git every time they were regenerated on a new date, and no
+    # test could catch it, because both halves of a comparison run on the same
+    # day. Counting back from a fixed date makes a seed mean one thing forever.
     return Member(
         name=fake.name().upper(),
         uan=str(rng.randint(100000000000, 199999999999)),
-        dob=fake.date_of_birth(minimum_age=25, maximum_age=55).strftime("%d-%m-%Y"),
+        dob=fake.date_between_dates(
+            date_start=DOB_REFERENCE - timedelta(days=round(MAX_AGE * 365.25)),
+            date_end=DOB_REFERENCE - timedelta(days=round(MIN_AGE * 365.25)),
+        ).strftime("%d-%m-%Y"),
     )
 
 
@@ -961,7 +989,3 @@ def generate(
             finally:
                 doc.close()
     return written
-
-
-def today_year() -> int:
-    return date.today().year
