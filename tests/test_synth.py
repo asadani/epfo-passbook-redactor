@@ -285,13 +285,18 @@ def test_a_seed_means_the_same_person_on_any_day():
     `--seed 42` produced a different member every day -- and the committed
     samples churned in git whenever they were regenerated on a new date. No
     same-process comparison can catch that, because both halves run on the same
-    day. Only a literal can.
+    day, which is why this pins literals instead.
+
+    The first attempt at a fix, Faker's date_between_dates, then disagreed
+    between a Windows machine and a Linux CI runner on the same seed. The date
+    now comes from a plain random.Random seeded with the UAN, which is stable
+    across platforms and CPython versions.
     """
     from faker import Faker
 
     for seed, name, uan, dob in (
-        (42, "ARYAN MAHARAJ", "115631219101", "02-05-1979"),
-        (99, "LAJITA IYENGAR", "153274680169", "25-05-1991"),
+        (42, "ARYAN MAHARAJ", "115631219101", "18-02-1977"),
+        (99, "LAJITA IYENGAR", "153274680169", "18-05-1986"),
     ):
         Faker.seed(seed)
         member = make_member(Faker("en_IN"), random.Random(seed))

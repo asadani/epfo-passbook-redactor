@@ -868,19 +868,29 @@ def _company(fake) -> str:
 
 
 def make_member(fake, rng: random.Random) -> Member:
-    # date_between_dates, not date_of_birth: the latter counts back from today,
-    # so --seed 42 produced a different person tomorrow. Reproducible within a
-    # day and not across one is the worst of both -- the committed samples
-    # churned in git every time they were regenerated on a new date, and no
-    # test could catch it, because both halves of a comparison run on the same
-    # day. Counting back from a fixed date makes a seed mean one thing forever.
+    """One synthetic person. The same seed gives the same person, anywhere.
+
+    The date of birth is the awkward field. Faker's ``date_of_birth`` counts
+    back from *today*, so a seed meant one person on Tuesday and another on
+    Wednesday. ``date_between_dates`` fixes the endpoints but converts them
+    through local-time timestamps and has moved between Faker releases, so it
+    disagreed between a Windows machine and a CI runner on the same seed.
+
+    So the date does not come from Faker at all. It comes from a plain
+    ``random.Random`` seeded with the UAN string -- seeding from a string goes
+    through SHA-512 and is stable across platforms and CPython versions. Using
+    a separate stream rather than ``rng`` also means adding this did not
+    perturb the establishment codes and wages drawn after it.
+    """
+    name = fake.name().upper()
+    uan = str(rng.randint(100000000000, 199999999999))
+    age_days = random.Random(uan).randint(
+        round(MIN_AGE * 365.25), round(MAX_AGE * 365.25)
+    )
     return Member(
-        name=fake.name().upper(),
-        uan=str(rng.randint(100000000000, 199999999999)),
-        dob=fake.date_between_dates(
-            date_start=DOB_REFERENCE - timedelta(days=round(MAX_AGE * 365.25)),
-            date_end=DOB_REFERENCE - timedelta(days=round(MIN_AGE * 365.25)),
-        ).strftime("%d-%m-%Y"),
+        name=name,
+        uan=uan,
+        dob=(DOB_REFERENCE - timedelta(days=age_days)).strftime("%d-%m-%Y"),
     )
 
 
